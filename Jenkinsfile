@@ -32,14 +32,15 @@ pipeline {
             }
         }
 
-        stage('Install & Test module') {
+        stage('Install module') {
             steps {
                 sh '''
                     docker compose -p $COMPOSE_PROJECT run --rm web \
                         odoo -d $TEST_DB \
                         --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons \
                         -i library_management \
-                        --test-enable --stop-after-init --log-level=test
+                        --test-tags /library_management \
+                        --stop-after-init --log-level=test
                 '''
             }
         }
