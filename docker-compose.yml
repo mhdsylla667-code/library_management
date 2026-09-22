@@ -1,15 +1,6 @@
 services:
-  web:
-    image: odoo:18.0
-    depends_on:
-      - db
-    ports:
-      - "8069:8069"
-    volumes:
-      - ./addons:/mnt/extra-addons
-      - ./odoo.conf:/etc/odoo/odoo.conf
-    command: odoo --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons
 
+  # ── Base de données Odoo ──────────────────────────────────────────
   db:
     image: postgres:15
     environment:
@@ -19,5 +10,39 @@ services:
     volumes:
       - odoo-db-data:/var/lib/postgresql/data
 
+  # ── Serveur Odoo ──────────────────────────────────────────────────
+  web:
+    image: odoo:18.0
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    volumes:
+      - ./addons:/mnt/extra-addons
+    environment:
+      - HOST=db
+      - PORT=5432
+      - USER=odoo
+      - PASSWORD=odoo
+    command: odoo --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons
+
+  # ── Jenkins CI/CD ─────────────────────────────────────────────────
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    container_name: jenkins
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"     # Interface web Jenkins
+      - "50000:50000"   # Connexion des agents Jenkins
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # Accès Docker depuis Jenkins
+      - ./addons:/mnt/extra-addons                  # Accès au code du module
+    restart: unless-stopped
+
 volumes:
   odoo-db-data:
+  jenkins-home:

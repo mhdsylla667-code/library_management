@@ -1,0 +1,95 @@
+pipeline {
+    agent any
+
+    environment {
+        ODOO_ADDONS_PATH = "/usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons"
+        ODOO_DB          = "odoo"
+        COMPOSE_FILE     = "docker-compose.yml"
+    }
+
+    // ── Déclenchement automatique après le pipeline CI ───────────────
+    triggers {
+        upstream(upstreamProjects: 'CI-library_management', threshold: hudson.model.Result.SUCCESS)
+    }
+
+    stages {
+
+        // ── 1. Récupération du code source ───────────────────────────
+        stage('Checkout') {
+            steps {
+                checkout scm
+                echo "✅ Code source récupéré"
+            }
+        }
+
+        // ── 2. Arrêt propre du conteneur Odoo en cours ───────────────
+        stage('Stop Odoo') {
+            steps {
+                sh '''
+                    echo "🛑 Arrêt du conteneur Odoo en cours..."
+                    docker compose -f $COMPOSE_FILE stop web || true
+                    docker compose -f $COMPOSE_FILE rm -f web || true
+                    echo "✅ Conteneur Odoo arrêté"
+                '''
+            }
+        }
+
+        // ── 3. Déploiement de la nouvelle version ────────────────────
+        stage('Deploy') {
+            steps {
+                sh '''
+                    echo "🚀 Démarrage du nouveau conteneur Odoo..."
+                    docker compose -f $COMPOSE_FILE up -d web
+                    echo "⏳ Attente que Odoo soit prêt (20s)..."
+                    sleep 20
+                    echo "✅ Odoo redémarré avec succès"
+                '''
+            }
+        }
+
+        // ── 4. Mise à jour du module en base de données ──────────────
+        stage('Update Module') {
+            steps {
+                sh '''
+                    echo "🔄 Mise à jour du module library_management en base..."
+                    docker compose -f $COMPOSE_FILE run --rm web \
+                        odoo -d $ODOO_DB \
+                        --addons-path=$ODOO_ADDONS_PATH \
+                        -u library_management \
+                        --stop-after-init \
+                        --log-level=info
+                    echo "✅ Module mis à jour en base"
+                '''
+            }
+        }
+
+        // ── 5. Vérification que Odoo répond ──────────────────────────
+        stage('Health Check') {
+            steps {
+                sh '''
+                    echo "🏥 Vérification que Odoo est opérationnel..."
+                    sleep 5
+                    curl -f http://localhost:8069/web/health || \
+                        (echo "❌ Odoo ne répond pas !" && exit 1)
+                    echo "✅ Odoo est opérationnel sur http://localhost:8069"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "🎉 Déploiement réussi — library_management est en production sur http://localhost:8069"
+        }
+        failure {
+            echo "❌ Déploiement échoué — rollback nécessaire."
+            sh '''
+                echo "↩️  Tentative de rollback : redémarrage du conteneur..."
+                docker compose -f $COMPOSE_FILE up -d web || true
+            '''
+        }
+        always {
+            echo "📋 Fin du pipeline CD."
+        }
+    }
+}
