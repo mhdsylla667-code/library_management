@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_library_loan_list" model="ir.ui.view">
+        <field name="name">library.loan.list</field>
+        <field name="model">library.loan</field>
+        <field name="arch" type="xml">
+            <list string="Emprunts"
+                  decoration-danger="state == 'late'"
+                  decoration-success="state == 'returned'"
+                  decoration-info="state == 'ongoing'">
+                <field name="name"/>
+                <field name="book_id"/>
+                <field name="borrower_id"/>
+                <field name="loan_date"/>
+                <field name="due_date"/>
+                <field name="return_date"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_library_loan_form" model="ir.ui.view">
+        <field name="name">library.loan.form</field>
+        <field name="model">library.loan</field>
+        <field name="arch" type="xml">
+            <form string="Emprunt">
+                <header>
+                    <button name="action_confirm" string="Confirmer l'emprunt"
+                            type="object" class="oe_highlight"
+                            invisible="state != 'draft'"/>
+                    <button name="action_return" string="Marquer comme rendu"
+                            type="object" class="oe_highlight"
+                            invisible="state not in ('ongoing', 'late')"/>
+                    <button name="action_cancel" string="Annuler"
+                            type="object"
+                            invisible="state == 'returned'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,ongoing,returned"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="book_id"/>
+                            <field name="borrower_id"/>
+                        </group>
+                        <group>
+                            <field name="loan_date"/>
+                            <field name="due_date" readonly="1"/>
+                            <field name="return_date" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_library_loan_search" model="ir.ui.view">
+        <field name="name">library.loan.search</field>
+        <field name="model">library.loan</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher un emprunt">
+                <field name="name"/>
+                <field name="book_id"/>
+                <field name="borrower_id"/>
+                <filter string="En retard" name="filter_late" domain="[('state', '=', 'late')]"/>
+                <filter string="Disponibles" name="filter_ongoing" domain="[('state', '=', 'ongoing')]"/>
+                <separator/>
+                <group expand="0" string="Regrouper par">
+                    <filter string="Livre" name="groupby_book" context="{'group_by': 'book_id'}"/>
+                    <filter string="Emprunteur" name="groupby_borrower" context="{'group_by': 'borrower_id'}"/>
+                    <filter string="Statut" name="groupby_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_library_loan" model="ir.actions.act_window">
+        <field name="name">Emprunts</field>
+        <field name="res_model">library.loan</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_library_loan_search"/>
+    </record>
+
+</odoo>

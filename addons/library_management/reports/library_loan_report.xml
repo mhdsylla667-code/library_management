@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Action de rapport -->
+    <record id="action_report_library_loan" model="ir.actions.report">
+        <field name="name">Fiche de prêt</field>
+        <field name="model">library.loan</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">library_management.report_loan_template</field>
+        <field name="report_file">library_management.report_loan_template</field>
+        <field name="print_report_name">'Fiche_de_pret_%s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_library_loan"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Template QWeb -->
+    <template id="report_loan_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Fiche de prêt</h2>
+                        <table class="table table-sm o_main_table">
+                            <tr>
+                                <td><strong>Référence :</strong></td>
+                                <td><span t-field="o.name"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Livre :</strong></td>
+                                <td><span t-field="o.book_id.name"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Emprunteur :</strong></td>
+                                <td><span t-field="o.borrower_id.name"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Date d'emprunt :</strong></td>
+                                <td><span t-field="o.loan_date"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Date de retour prévue :</strong></td>
+                                <td><span t-field="o.due_date"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Date de retour effective :</strong></td>
+                                <td><span t-field="o.return_date"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Statut :</strong></td>
+                                <td><span t-field="o.state"/></td>
+                            </tr>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

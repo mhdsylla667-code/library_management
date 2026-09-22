@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Odoo
+*.pot
+*.log
+filestore/
+sessions/
+.odoo_history
+
+# Docker volumes / données locales
+odoo-db-data/
+postgres-data/
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environnements virtuels Python
+.env
+.venv/
+venv/
+env/
+
+# Fichiers de configuration sensibles (ne pas committer)
+odoo.conf

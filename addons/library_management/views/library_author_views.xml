@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vue Formulaire pour les Auteurs -->
+    <record id="view_library_author_form" model="ir.ui.view">
+        <field name="name">library.author.form</field>
+        <field name="model">library.author</field>
+        <field name="arch" type="xml">
+            <form string="Auteur">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Nom de l'auteur"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="bio"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Livres écrits" name="books">
+                            <field name="book_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="isbn"/>
+                                    <field name="publication_date"/>
+                                    <field name="state" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue Liste pour les Auteurs -->
+    <record id="view_library_author_tree" model="ir.ui.view">
+        <field name="name">library.author.list</field>
+        <field name="model">library.author</field>
+        <field name="arch" type="xml">
+            <list string="Auteurs">
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action de fenêtre -->
+    <record id="action_library_author" model="ir.actions.act_window">
+        <field name="name">Auteurs</field>
+        <field name="res_model">library.author</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>
