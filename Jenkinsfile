@@ -22,6 +22,12 @@ pipeline {
             steps {
                 sh '''
                     echo "🔍 Analyse statique du module..."
+                    # flake8 est installé dans le conteneur Jenkins via Dockerfile.jenkins
+                    # On utilise le flag --break-system-packages si besoin
+                    if ! command -v flake8 &> /dev/null; then
+                        pip3 install --break-system-packages --quiet flake8 || \
+                        pip3 install --quiet flake8 || true
+                    fi
                     flake8 addons/library_management \
                         --max-line-length=120 \
                         --exclude=__pycache__,*.pyc \
