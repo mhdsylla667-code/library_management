@@ -9,7 +9,7 @@ pipeline {
 
     // ── Déclenchement automatique après le pipeline CI ───────────────
     triggers {
-        upstream(upstreamProjects: 'CI-library_management', threshold: hudson.model.Result.SUCCESS)
+        upstream(upstreamProjects: 'library_management-ci', threshold: hudson.model.Result.SUCCESS)
     }
 
     stages {
