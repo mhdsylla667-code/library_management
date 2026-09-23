@@ -68,10 +68,13 @@ pipeline {
             steps {
                 sh '''
                     echo "🏥 Vérification que Odoo est opérationnel..."
-                    sleep 5
-                    curl -f http://localhost:8069/web/health || \
+                    sleep 10
+                    # Récupérer l'IP du conteneur web dans le réseau Docker
+                    ODOO_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker compose -f $COMPOSE_FILE ps -q web))
+                    echo "IP Odoo : $ODOO_IP"
+                    curl -f http://$ODOO_IP:8069/web/health || \
                         (echo "❌ Odoo ne répond pas !" && exit 1)
-                    echo "✅ Odoo est opérationnel sur http://localhost:8069"
+                    echo "✅ Odoo est opérationnel"
                 '''
             }
         }
@@ -79,7 +82,7 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Déploiement réussi — library_management est en production sur http://localhost:8069"
+            echo "🎉 Déploiement réussi — library_management est en production !"
         }
         failure {
             echo "❌ Déploiement échoué — rollback nécessaire."
