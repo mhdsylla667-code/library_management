@@ -44,9 +44,7 @@ pipeline {
                         -p 17100:8069 \
                         $IMAGE
 
-                    echo "Attente du demarrage d'Odoo (15s)..."
-                    sleep 15
-                    echo "Conteneur redeploye"
+                    echo "Conteneur demarre, attente de disponibilite..."
                 '''
             }
         }
@@ -54,10 +52,17 @@ pipeline {
         stage('Health Check') {
             steps {
                 sh '''
-                    echo "Verification que Odoo repond..."
-                    curl -f http://localhost:17100/web/health || \
-                        (echo "Odoo ne repond pas !" && exit 1)
-                    echo "Odoo est operationnel sur http://localhost:17100"
+                    echo "Verification que Odoo repond (jusqu'a 60s)..."
+                    for i in $(seq 1 12); do
+                        if curl -sf http://localhost:17100/web/health > /dev/null; then
+                            echo "Odoo est operationnel sur http://localhost:17100"
+                            exit 0
+                        fi
+                        echo "Tentative $i/12 - Odoo pas encore pret, attente 5s..."
+                        sleep 5
+                    done
+                    echo "Odoo ne repond toujours pas apres 60s !"
+                    exit 1
                 '''
             }
         }
