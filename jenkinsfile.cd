@@ -54,8 +54,8 @@ pipeline {
                 sh '''
                     echo "Verification que Odoo repond (jusqu'a 60s)..."
                     for i in $(seq 1 12); do
-                        if curl -sf http://localhost:17100/web/health > /dev/null; then
-                            echo "Odoo est operationnel sur http://localhost:17100"
+                        if curl -sf http://5.189.130.215:17100/web/health > /dev/null; then
+                            echo "Odoo est operationnel sur http://5.189.130.215:17100"
                             exit 0
                         fi
                         echo "Tentative $i/12 - Odoo pas encore pret, attente 5s..."
