@@ -21,10 +21,10 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS_VAR'
                 )]) {
                     sh '''
-                        echo "📥 Connexion à DockerHub et récupération de l'image..."
+                        echo "Connexion a DockerHub et recuperation de l'image..."
                         echo $DOCKER_PASS_VAR | docker login -u $DOCKER_USER_VAR --password-stdin
                         docker pull $IMAGE
-                        echo "✅ Image récupérée : $IMAGE"
+                        echo "Image recuperee : $IMAGE"
                     '''
                 }
             }
@@ -33,20 +33,20 @@ pipeline {
         stage('Redeploy') {
             steps {
                 sh '''
-                    echo "🛑 Arrêt de l'ancien conteneur..."
+                    echo "Arret de l'ancien conteneur..."
                     docker stop library_app || true
                     docker rm library_app || true
 
-                    echo "🚀 Démarrage du nouveau conteneur..."
+                    echo "Demarrage du nouveau conteneur..."
                     docker run -d \
                         --name library_app \
                         --link odoo-db:db \
                         -p 17100:8069 \
                         $IMAGE
 
-                    echo "⏳ Attente du démarrage d'Odoo (15s)..."
+                    echo "Attente du demarrage d'Odoo (15s)..."
                     sleep 15
-                    echo "✅ Conteneur redéployé"
+                    echo "Conteneur redeploye"
                 '''
             }
         }
@@ -54,10 +54,10 @@ pipeline {
         stage('Health Check') {
             steps {
                 sh '''
-                    echo "🏥 Vérification que Odoo répond..."
+                    echo "Verification que Odoo repond..."
                     curl -f http://localhost:17100/web/health || \
-                        (echo "❌ Odoo ne répond pas !" && exit 1)
-                    echo "✅ Odoo est opérationnel sur http://localhost:17100"
+                        (echo "Odoo ne repond pas !" && exit 1)
+                    echo "Odoo est operationnel sur http://localhost:17100"
                 '''
             }
         }
@@ -65,5 +65,13 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Déploiement réussi — library_management est en ligne sur http://5.189.130.215:17100"
+            echo "Deploiement reussi -- library_management est en ligne sur http://5.189.130.215:17100"
         }
+        failure {
+            echo "Deploiement echoue -- verifier les logs."
+        }
+        always {
+            sh 'docker logout || true'
+        }
+    }
+}
