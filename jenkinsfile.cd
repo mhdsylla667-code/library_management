@@ -2,88 +2,62 @@ pipeline {
     agent any
 
     environment {
-        ODOO_ADDONS_PATH = "/usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons"
-        ODOO_DB          = "odoo"
-        COMPOSE_FILE     = "docker-compose.yml"
+        DOCKER_USER = 'mhdsylla'
+        IMAGE_NAME  = 'library_management'
+        IMAGE       = "${DOCKER_USER}/${IMAGE_NAME}:latest"
     }
 
-    // ── Déclenchement automatique après le pipeline CI ───────────────
     triggers {
         upstream(upstreamProjects: 'library_management-ci', threshold: hudson.model.Result.SUCCESS)
     }
 
     stages {
 
-        // ── 1. Récupération du code source ───────────────────────────
-        stage('Checkout') {
+        stage('Pull image') {
             steps {
-                checkout scm
-                echo "✅ Code source récupéré"
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER_VAR',
+                    passwordVariable: 'DOCKER_PASS_VAR'
+                )]) {
+                    sh '''
+                        echo "📥 Connexion à DockerHub et récupération de l'image..."
+                        echo $DOCKER_PASS_VAR | docker login -u $DOCKER_USER_VAR --password-stdin
+                        docker pull $IMAGE
+                        echo "✅ Image récupérée : $IMAGE"
+                    '''
+                }
             }
         }
 
-        // ── 2. Arrêt propre du conteneur Odoo en cours ───────────────
-        stage('Stop Odoo') {
+        stage('Redeploy') {
             steps {
                 sh '''
-                    echo "🛑 Arrêt du conteneur Odoo en cours..."
-                    docker compose -f $COMPOSE_FILE stop web || true
-                    docker compose -f $COMPOSE_FILE rm -f web || true
-                    echo "✅ Conteneur Odoo arrêté"
+                    echo "🛑 Arrêt de l'ancien conteneur..."
+                    docker stop library_app || true
+                    docker rm library_app || true
+
+                    echo "🚀 Démarrage du nouveau conteneur..."
+                    docker run -d \
+                        --name library_app \
+                        --link odoo-db:db \
+                        -p 17100:8069 \
+                        $IMAGE
+
+                    echo "⏳ Attente du démarrage d'Odoo (15s)..."
+                    sleep 15
+                    echo "✅ Conteneur redéployé"
                 '''
             }
         }
 
-        // ── 3. Déploiement de la nouvelle version ────────────────────
-        stage('Deploy') {
-            steps {
-                sh '''
-                    echo "🚀 Démarrage du nouveau conteneur Odoo..."
-                    docker compose -f $COMPOSE_FILE up -d web
-                    echo "⏳ Attente que Odoo soit prêt (20s)..."
-                    sleep 20
-                    echo "✅ Odoo redémarré avec succès"
-                '''
-            }
-        }
-
-        // ── 4. Mise à jour du module en base de données ──────────────
-        stage('Update Module') {
-            steps {
-                sh '''
-                    echo "🔄 Mise à jour du module library_management en base..."
-                    docker compose -f $COMPOSE_FILE run --rm web \
-                        odoo -d $ODOO_DB \
-                        --addons-path=$ODOO_ADDONS_PATH \
-                        -u library_management \
-                        --stop-after-init \
-                        --log-level=info
-                    echo "✅ Module mis à jour en base"
-                '''
-            }
-        }
-
-        // ── 5. Vérification que Odoo répond ──────────────────────────
         stage('Health Check') {
             steps {
                 sh '''
-                    echo "🏥 Vérification que Odoo est opérationnel..."
-                    ODOO_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker compose -f $COMPOSE_FILE ps -q web))
-                    echo "IP Odoo : $ODOO_IP"
-
-                    # Attente jusqu'à 3 minutes avec retry toutes les 10s
-                    MAX_RETRIES=18
-                    COUNT=0
-                    until curl -sf http://$ODOO_IP:8069/web/health > /dev/null 2>&1; do
-                        COUNT=$((COUNT+1))
-                        if [ $COUNT -ge $MAX_RETRIES ]; then
-                            echo "❌ Odoo ne répond pas après $((MAX_RETRIES * 10))s !"
-                            exit 1
-                        fi
-                        echo "⏳ Attente Odoo... ($COUNT/$MAX_RETRIES)"
-                        sleep 10
-                    done
-                    echo "✅ Odoo est opérationnel sur http://$ODOO_IP:8069"
+                    echo "🏥 Vérification que Odoo répond..."
+                    curl -f http://localhost:17100/web/health || \
+                        (echo "❌ Odoo ne répond pas !" && exit 1)
+                    echo "✅ Odoo est opérationnel sur http://localhost:17100"
                 '''
             }
         }
@@ -91,17 +65,5 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Déploiement réussi — library_management est en production !"
+            echo "🎉 Déploiement réussi — library_management est en ligne sur http://5.189.130.215:17100"
         }
-        failure {
-            echo "❌ Déploiement échoué — rollback nécessaire."
-            sh '''
-                echo "↩️  Tentative de rollback : redémarrage du conteneur..."
-                docker compose -f $COMPOSE_FILE up -d web || true
-            '''
-        }
-        always {
-            echo "📋 Fin du pipeline CD."
-        }
-    }
-}
